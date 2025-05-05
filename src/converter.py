@@ -1,8 +1,12 @@
 import os
-import json
 import yaml
 import logging
+import json
 import glob
+import re
+import shutil
+import argparse
+from datetime import datetime
 from dotenv import load_dotenv
 import openai
 from openai import OpenAI
@@ -21,6 +25,133 @@ logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
+
+
+def refine_json2tekton_prompt(log_file_path, prompt_file_path):
+    """
+    Uses the validation feedback log to refine the json2tekton prompt via an LLM call.
+
+    :param log_file_path: Path to the tekton_validation_errors.log file.
+    :param prompt_file_path: Path to the src/prompts/json2tekton.txt file.
+    :return: True if successful, False otherwise.
+    """
+    logger.info(f"Starting prompt refinement for {os.path.basename(prompt_file_path)} using feedback from {os.path.basename(log_file_path)}")
+
+    try:
+        # --- 1. Read Log File Content ---
+        if not os.path.exists(log_file_path):
+            logger.error(f"Log file not found: {log_file_path}")
+            return False
+        with open(log_file_path, 'r') as f:
+            log_content = f.read()
+        if not log_content.strip():
+            logger.warning(f"Log file {log_file_path} is empty. Skipping prompt refinement.")
+            return True # Not an error, just nothing to do
+
+        # --- 2. Read Current Prompt Content ---
+        if not os.path.exists(prompt_file_path):
+            logger.error(f"Prompt file not found: {prompt_file_path}")
+            return False
+        with open(prompt_file_path, 'r') as f:
+            current_prompt = f.read()
+
+        # --- 3. Initialize OpenAI Client --- 
+        # Reusing API key loading logic structure
+        api_key = os.getenv('OPENAI_API_KEY')
+        if not api_key:
+            try:
+                project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                config_path = os.path.join(project_root, 'config.yaml')
+                if os.path.exists(config_path):
+                    with open(config_path, 'r') as cfg_file:
+                        config = yaml.safe_load(cfg_file)
+                        api_key = config.get('openai', {}).get('api_key')
+                    if api_key:
+                        logger.info("Loaded API key from config.yaml for prompt refinement")
+            except Exception as cfg_e:
+                logger.error(f"Error reading config.yaml for API key during refinement: {cfg_e}")
+        
+        if not api_key:
+            error_msg = "OpenAI API key missing for prompt refinement. Set OPENAI_API_KEY or add to config.yaml."
+            logger.error(error_msg)
+            return False
+
+        client = OpenAI(api_key=api_key)
+
+        # --- 4. Construct Refinement Prompt for LLM ---
+        refinement_system_prompt = ("You are an expert prompt engineer. Your task is to refine a system prompt used for converting structured JSON into Tekton Pipeline YAML. "
+                                  "You will be given the original prompt and feedback/validation reports generated from Tekton YAML produced using that original prompt. "
+                                  "Analyze the feedback and modify the original prompt to address the issues raised in the feedback, aiming to generate higher quality, more compliant Tekton YAML in the future. "
+                                  "Output ONLY the refined prompt text. Do not include any explanations, greetings, or markdown formatting around the prompt text.")
+        
+        refinement_user_message = (f"Original Prompt:\n```text\n{current_prompt}\n```\n\n"
+                                 f"Validation Feedback Log:\n```log\n{log_content}\n```\n\n"
+                                 f"Based on the Validation Feedback Log, please refine the Original Prompt. Remember to output ONLY the refined prompt text.")
+
+        # --- 5. Call LLM for Refinement --- 
+        logger.info("Sending request to LLM for prompt refinement...")
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4o", # Using a more capable model for prompt engineering might yield better results
+                messages=[
+                    {"role": "system", "content": refinement_system_prompt},
+                    {"role": "user", "content": refinement_user_message}
+                ],
+                temperature=0.5 # Lower temperature for more focused refinement
+            )
+            refined_prompt = response.choices[0].message.content.strip()
+            logger.info("Received refined prompt from LLM.")
+
+        except Exception as api_e:
+            logger.error(f"Error calling OpenAI API for prompt refinement: {api_e}")
+            return False
+
+        # --- 6. Validate and Write Refined Prompt --- 
+        if not refined_prompt:
+            logger.error("LLM returned an empty response for the refined prompt.")
+            return False
+
+        # --- 6. Version existing prompt --- 
+        try:
+            prompt_dir = os.path.dirname(prompt_file_path)
+            base_name = os.path.splitext(os.path.basename(prompt_file_path))[0]
+            version_pattern = os.path.join(prompt_dir, f"{base_name}_v*.txt")
+            existing_versions = glob.glob(version_pattern)
+            
+            max_version = 0
+            for version_file in existing_versions:
+                match = re.search(r'_v(\d+)\.txt$', version_file)
+                if match:
+                    max_version = max(max_version, int(match.group(1)))
+            
+            next_version = max_version + 1
+            backup_file_path = os.path.join(prompt_dir, f"{base_name}_v{next_version}.txt")
+            
+            # Copy current prompt to versioned backup
+            if os.path.exists(prompt_file_path):
+                shutil.copy2(prompt_file_path, backup_file_path)
+                logger.info(f"Backed up current prompt to {backup_file_path}")
+            else:
+                 logger.warning(f"Original prompt file {prompt_file_path} not found for backup.")
+
+        except Exception as backup_e:
+            logger.error(f"Error backing up existing prompt file {prompt_file_path}: {backup_e}")
+            # Continue to writing the new prompt even if backup fails, but log error
+
+        # --- 7. Write Refined Prompt --- 
+        try:
+            with open(prompt_file_path, 'w') as f:
+                f.write(refined_prompt)
+            logger.info(f"Successfully updated prompt file: {prompt_file_path}")
+            return True
+        except Exception as write_e:
+            logger.error(f"Error writing refined prompt to {prompt_file_path}: {write_e}")
+            return False
+            
+    except Exception as e:
+        logger.error(f"An unexpected error occurred during prompt refinement: {e}")
+        return False
+
 
 class JenkinsTektonConverter:
     def __init__(self, config_path=None):
@@ -445,8 +576,21 @@ def main():
 
     # Process Jenkins files (conversion, validation, saving fixed files, logging reports)
     process_jenkins_files(input_dir, output_dir, errors_log_path, run_number)
-
     print("\nConversion and validation process finished.")
+
+    # --- Attempt to Refine Prompt based on logs (ONLY IF FLAG IS SET) ---
+    if args.refine_prompt:
+        print("\n--refine-prompt flag detected.")
+        print("Attempting to refine the json2tekton prompt based on the latest validation feedback...")
+        prompts_dir = os.path.join(os.path.dirname(__file__), 'prompts')
+        json2tekton_prompt_path = os.path.join(prompts_dir, 'json2tekton.txt')
+        refinement_success = refine_json2tekton_prompt(errors_log_path, json2tekton_prompt_path)
+        if refinement_success:
+            print(f"Prompt refinement successful. The updated prompt is now in {json2tekton_prompt_path}.")
+        else:
+            print("Prompt refinement failed. Check logs for details.")
+    else:
+        print("\nSkipping prompt refinement step (--refine-prompt flag not provided).")
 
     # Check if the validation log file has significant content (more than header)
     try:

@@ -7,21 +7,18 @@
     "NODE_HOME": "/usr/local/node"
   },
   "parameters": null,
-  "triggers": null,
-  "options": null,
   "stages": [
     {
       "name": "Checkout",
-      "agent": null,
+      "agent": {
+        "type": "any"
+      },
       "environment": null,
-      "tools": null,
       "when": null,
       "steps": [
         {
           "type": "git",
-          "arguments": {
-            "url": "https://github.com/your-repository/node-app.git"
-          },
+          "arguments": "https://github.com/your-repository/node-app.git",
           "script_content": null,
           "credentials_used": null
         }
@@ -30,15 +27,16 @@
     },
     {
       "name": "Build",
-      "agent": null,
+      "agent": {
+        "type": "any"
+      },
       "environment": null,
-      "tools": null,
       "when": null,
       "steps": [
         {
           "type": "script",
           "arguments": null,
-          "script_content": "npm install",
+          "script_content": "sh 'npm install'",
           "credentials_used": null
         }
       ],
@@ -46,15 +44,16 @@
     },
     {
       "name": "Test",
-      "agent": null,
+      "agent": {
+        "type": "any"
+      },
       "environment": null,
-      "tools": null,
       "when": null,
       "steps": [
         {
           "type": "script",
           "arguments": null,
-          "script_content": "npm test",
+          "script_content": "sh 'npm test'",
           "credentials_used": null
         }
       ],
@@ -62,15 +61,16 @@
     },
     {
       "name": "Deploy",
-      "agent": null,
+      "agent": {
+        "type": "any"
+      },
       "environment": null,
-      "tools": null,
       "when": null,
       "steps": [
         {
           "type": "script",
           "arguments": null,
-          "script_content": "npm run deploy:staging",
+          "script_content": "sh 'npm run deploy:staging'",
           "credentials_used": null
         }
       ],
@@ -78,15 +78,16 @@
     },
     {
       "name": "Cleanup",
-      "agent": null,
+      "agent": {
+        "type": "any"
+      },
       "environment": null,
-      "tools": null,
       "when": null,
       "steps": [
         {
           "type": "echo",
-          "arguments": null,
-          "script_content": "Cleaning up resources...",
+          "arguments": "Cleaning up resources...",
+          "script_content": null,
           "credentials_used": null
         }
       ],
@@ -97,24 +98,24 @@
     "always": [
       {
         "type": "echo",
-        "arguments": null,
-        "script_content": "Pipeline completed!",
+        "arguments": "Pipeline completed!",
+        "script_content": null,
         "credentials_used": null
       }
     ],
     "success": [
       {
         "type": "echo",
-        "arguments": null,
-        "script_content": "Deployment to staging successful!",
+        "arguments": "Deployment to staging successful!",
+        "script_content": null,
         "credentials_used": null
       }
     ],
     "failure": [
       {
         "type": "echo",
-        "arguments": null,
-        "script_content": "Pipeline failed! Check the logs for errors.",
+        "arguments": "Pipeline failed! Check the logs for errors.",
+        "script_content": null,
         "credentials_used": null
       }
     ]
