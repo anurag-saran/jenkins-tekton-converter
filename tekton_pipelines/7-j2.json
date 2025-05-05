@@ -1,0 +1,91 @@
+{
+  "pipeline_type": "Declarative",
+  "agent": {
+    "type": "any"
+  },
+  "environment": {
+    "NODE_HOME": "/usr/local/node"
+  },
+  "stages": [
+    {
+      "name": "Checkout",
+      "agent": {
+        "type": "any"
+      },
+      "steps": [
+        {
+          "type": "git",
+          "arguments": "https://github.com/your-repository/node-app.git"
+        }
+      ]
+    },
+    {
+      "name": "Build",
+      "agent": {
+        "type": "any"
+      },
+      "steps": [
+        {
+          "type": "script",
+          "script_content": "sh 'npm install'"
+        }
+      ]
+    },
+    {
+      "name": "Test",
+      "agent": {
+        "type": "any"
+      },
+      "steps": [
+        {
+          "type": "script",
+          "script_content": "sh 'npm test'"
+        }
+      ]
+    },
+    {
+      "name": "Deploy",
+      "agent": {
+        "type": "any"
+      },
+      "steps": [
+        {
+          "type": "script",
+          "script_content": "sh 'npm run deploy:staging'"
+        }
+      ]
+    },
+    {
+      "name": "Cleanup",
+      "agent": {
+        "type": "any"
+      },
+      "steps": [
+        {
+          "type": "echo",
+          "arguments": "Cleaning up resources..."
+        }
+      ]
+    }
+  ],
+  "post": {
+    "always": [
+      {
+        "type": "echo",
+        "arguments": "Pipeline completed!"
+      }
+    ],
+    "success": [
+      {
+        "type": "echo",
+        "arguments": "Deployment to staging successful!"
+      }
+    ],
+    "failure": [
+      {
+        "type": "echo",
+        "arguments": "Pipeline failed! Check the logs for errors."
+      }
+    ]
+  }
+}

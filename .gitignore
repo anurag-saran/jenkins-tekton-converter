@@ -1,0 +1,15 @@
+# Virtual environment
+venv/
+*.pyc
+__pycache__/
+
+# Environment files
+.env
+*.log
+!tekton_validation_errors.log
+
+# IDE files
+.vscode/
+.idea/
+
+# Conversion output

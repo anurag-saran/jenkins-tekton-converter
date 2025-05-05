@@ -1,0 +1,19 @@
+openai:
+  api_key: ${OPENAI_API_KEY}  # API key from .env file
+  model: gpt-3.5-turbo  # You can change this to other OpenAI models if needed
+
+conversion:
+  input_directory: jenkins_files
+  output_directory: tekton_pipelines
+  supported_extensions:
+    - .jenkinsfile
+    - .jenkins
+    - .groovy
+
+logging:
+  level: INFO
+  file: conversion.log
+
+error_handling:
+  continue_on_file_error: true
+  max_retries: 3
