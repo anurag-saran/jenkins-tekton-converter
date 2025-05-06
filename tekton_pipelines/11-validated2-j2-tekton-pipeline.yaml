@@ -1,0 +1,77 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: sample-pipeline
+spec:
+  tasks:
+    - name: checkout-task
+      taskRef:
+        name: git-clone
+      params:
+        - name: url
+          value: https://github.com/your-repository/node-app.git
+      workspaces:
+        - name: source
+    - name: build-task
+      taskRef:
+        name: buildah
+      params:
+        - name: IMAGE
+          value: <required-container-image>
+        - name: DOCKERFILE
+          value: <path-to-dockerfile>
+        - name: CONTEXT
+          value: .
+      workspaces:
+        - name: source
+    - name: test-task
+      taskRef:
+        name: your-test-task
+      params:
+        - name: url
+          value: https://github.com/your-repository/node-app.git
+      workspaces:
+        - name: source
+    - name: deploy-task
+      taskRef:
+        name: your-deploy-task
+      params:
+        - name: url
+          value: https://github.com/your-repository/node-app.git
+      workspaces:
+        - name: source
+    - name: cleanup-task
+      taskRef:
+        name: your-cleanup-task
+      params:
+        - name: url
+          value: https://github.com/your-repository/node-app.git
+      workspaces:
+        - name: source
+  finallyTasks:
+    tasks:
+      - name: final-success-task
+        taskRef:
+          name: your-final-success-task
+        params:
+          - name: url
+            value: https://github.com/your-repository/node-app.git
+        workspaces:
+          - name: source
+      - name: final-failure-task
+        taskRef:
+          name: your-final-failure-task
+        params:
+          - name: url
+            value: https://github.com/your-repository/node-app.git
+        workspaces:
+          - name: source
+    finally:
+      - name: final-always-task
+        taskRef:
+          name: your-final-always-task
+        params:
+          - name: url
+            value: https://github.com/your-repository/node-app.git
+        workspaces:
+          - name: source

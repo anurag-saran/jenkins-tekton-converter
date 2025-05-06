@@ -1,0 +1,85 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: node-app-pipeline
+spec:
+  tasks:
+    - name: checkout-task
+      taskRef:
+        name: tekton/git-clone
+      workspaces:
+        - name: source
+          description: "Workspace for storing source code"
+      steps:
+        - name: git-clone-step
+          image: gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/git-init:v0.18.1
+    - name: build-task
+      taskRef:
+        name: tekton/cnb
+      workspaces:
+        - name: source
+          description: "Workspace for storing source code"
+      steps:
+        - name: cnb-build-step
+          image: gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/cnb-builder:v0.18.1
+          script: |
+            /ko-app/cnb/lifecycle/creator
+          env: []
+    - name: test-task
+      taskRef:
+        name: tekton/commands
+      workspaces:
+        - name: source
+          description: "Workspace for storing source code"
+      steps:
+        - name: npm-test-step
+          image: node:14
+          script: |
+            npm test
+          env: []
+    - name: deploy-task
+      taskRef:
+        name: tekton/commands
+      workspaces:
+        - name: source
+          description: "Workspace for storing source code"
+      steps:
+        - name: deploy-step
+          image: node:14
+          script: |
+            npm run deploy:staging
+          env: []
+    - name: cleanup-task
+      taskRef:
+        name: tekton/commands
+      steps:
+        - name: echo-step
+          image: alpine
+          script: echo "Cleaning up resources..."
+          env: []
+    finally:
+      tasks:
+        - name: pipeline-completed
+          taskRef:
+            name: tekton/commands
+          steps:
+            - name: pipeline-completed-step
+              image: alpine
+              script: echo "Pipeline completed!"
+              env: []
+        - name: deployment-success
+          taskRef:
+            name: tekton/commands
+          steps:
+            - name: deployment-success-step
+              image: alpine
+              script: echo "Deployment to staging successful!"
+              env: []
+        - name: pipeline-failed
+          taskRef:
+            name: tekton/commands
+          steps:
+            - name: pipeline-failed-step
+              image: alpine
+              script: echo "Pipeline failed! Check the logs for errors."
+              env: []

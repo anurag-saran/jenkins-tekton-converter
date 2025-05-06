@@ -1,0 +1,76 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: node-app-pipeline
+spec:
+  params:
+    - name: NODE_HOME
+      description: 'Node.js installation directory'
+      default: "/usr/local/node"
+  tasks:
+    - name: checkout-task
+      taskRef:
+        name: git-clone
+      params:
+        - name: url
+          value: "https://github.com/your-repository/node-app.git"
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+    - name: build-task
+      taskRef:
+        name: buildah
+      params:
+        - name: IMAGE
+          value: "<required-container-image>"
+        - name: DOCKERFILE
+          value: "Dockerfile"
+        - name: CONTEXT
+          value: "$(workspaces.source.path)"
+      workspaces:
+        - name: shared-workspace
+    - name: test-task
+      taskRef:
+        name: script
+      params:
+        - name: script
+          value: "npm test"
+      workspaces:
+        - name: shared-workspace
+    - name: deploy-task
+      taskRef:
+        name: script
+      params:
+        - name: script
+          value: "npm run deploy:staging"
+      workspaces:
+        - name: shared-workspace
+    - name: cleanup-task
+      taskRef:
+        name: script
+      params:
+        - name: script
+          value: "echo 'Cleaning up resources...'
+    - name: always-task
+      taskRef:
+        name: script
+      params:
+        - name: script
+          value: "echo 'Pipeline completed!'
+    - name: success-task
+      taskRef:
+        name: script
+      params:
+        - name: script
+          value: "echo 'Deployment to staging successful!'
+    - name: failure-task
+      taskRef:
+        name: script
+      params:
+        - name: script
+          value: "echo 'Pipeline failed! Check the logs for errors.'"
+    finally:
+      tasks:
+        - always-task
+        - success-task
+        - failure-task

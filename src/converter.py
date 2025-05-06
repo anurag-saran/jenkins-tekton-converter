@@ -578,6 +578,11 @@ def main():
     process_jenkins_files(input_dir, output_dir, errors_log_path, run_number)
     print("\nConversion and validation process finished.")
 
+    # --- Argument Parsing ---
+    parser = argparse.ArgumentParser(description="Convert Jenkinsfiles to Tekton Pipelines and optionally refine prompts.")
+    parser.add_argument("--refine-prompt", action="store_true", help="If set, attempts to refine the json2tekton prompt based on validation feedback.")
+    args = parser.parse_args()
+
     # --- Attempt to Refine Prompt based on logs (ONLY IF FLAG IS SET) ---
     if args.refine_prompt:
         print("\n--refine-prompt flag detected.")

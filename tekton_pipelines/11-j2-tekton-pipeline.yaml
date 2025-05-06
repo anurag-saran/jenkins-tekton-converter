@@ -1,0 +1,78 @@
+Based on the provided JSON pipeline configuration, I will convert it into Tekton YAML specifications. Below is the Tekton YAML representation:
+
+```yaml
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: sample-pipeline
+spec:
+  tasks:
+    - name: checkout-task
+      taskRef:
+        name: git-clone
+      params:
+        - name: url
+          value: https://github.com/your-repository/node-app.git
+      workspaces:
+        - name: source
+    - name: build-task
+      taskRef:
+        name: buildah
+      params:
+        - name: IMAGE
+          value: <required-container-image>
+        - name: DOCKERFILE
+          value: <path-to-dockerfile>
+        - name: CONTEXT
+          value: .
+      workspaces:
+        - name: source
+    - name: test-task
+      taskRef:
+        name: script
+      params:
+        - name: script
+          value: npm test
+    - name: deploy-task
+      taskRef:
+        name: script
+      params:
+        - name: script
+          value: npm run deploy:staging
+    - name: cleanup-task
+      taskRef:
+        name: script
+      params:
+        - name: script
+          value: echo "Cleaning up resources..."
+  finally:
+    tasks:
+      - name: final-success
+        taskRef:
+          name: script
+        params:
+          - name: script
+            value: echo "Deployment to staging successful!"
+      - name: final-failure
+        taskRef:
+          name: script
+        params:
+          - name: script
+            value: echo "Pipeline failed! Check the logs for errors."
+      - name: final-always
+        taskRef:
+          name: script
+        params:
+          - name: script
+            value: echo "Pipeline completed!"
+```
+
+Please note the following:
+- The provided JSON pipeline is structured as a single pipeline with multiple stages (Checkout, Build, Test, Deploy, Cleanup) and post actions (always, success, failure).
+- Each stage is represented as a Task within the Tekton Pipeline.
+- The steps within each stage are translated accordingly, utilizing the appropriate Task types (git-clone, buildah, script) based on the execution requirements.
+- Environment variables and credentials are not explicitly specified in the JSON, so they are omitted in the Tekton YAML (can be added as needed).
+- Placeholder values like `<required-container-image>` and `<path-to-dockerfile>` should be replaced with actual values as per the deployment requirements.
+- The final post actions (always, success, failure) are represented as final tasks within the Pipeline to handle post-execution messages.
+
+Ensure to replace placeholder values and adjust configurations as needed based on the specific requirements of your CI/CD process.
