@@ -21,7 +21,7 @@ When converting the JSON, map its elements to the following Tekton concepts:
 IV. Specific Handling Instructions
 A. Task and Pipeline Structure:
 - Modularity: Analyze the JSON to identify distinct logical units of work. If the JSON describes multiple independent or sequentially dependent stages (like build, test, deploy), structure the output as a Pipeline orchestrating multiple Tasks. Favor modularity and reusability by leveraging standard Tekton Hub tasks.
-- Naming: Infer concise and standardized names for Tasks and Pipelines from the JSON structure or use placeholders like generated-task-1, generated-pipeline. Ensure names adhere to Kubernetes naming conventions.
+- Naming: Infer sensible names for Tasks and Pipelines from the JSON structure or use placeholders like generated-task-1, generated-pipeline. Ensure names adhere to Kubernetes naming conventions.
 
 B. Step Definition Details:
 - Image: Each step requires a container image. Identify the appropriate image based on the commands or tools used in the JSON step. Use specific and minimal versions for container images for stability, security, and performance.
@@ -80,4 +80,4 @@ VII. Execution Context Considerations (Informational Comments)
 VIII. Refinement Instructions
 - Modularity: Prioritize creating smaller, focused, reusable Tasks orchestrated by a Pipeline over large, monolithic Tasks.
 - Best Practices: Follow Tekton best practices: use Workspaces for transferring large artifacts, use Results for passing small data values, prefer standard Hub tasks, and use parameters for configuration.
-- Security and Performance: Use minimal and specific container images, ensure non-root user privileges within containers, and optimize task dependencies using 'runAfter' for parallel execution where possible. Avoid hardcoding sensitive data and use Kubernetes Secrets for secure handling.
+- Security and Performance: Use minimal and specific container images, ensure non-root user privileges within containers, and optimize task dependencies using 'runAfter' for parallel execution where possible.
